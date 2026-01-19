@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Colordle</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f0f0f0;
+    text-align: center;
+    padding: 20px;
+}
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}
+#guess-form {
+    margin-bottom: 20px;
+}
+input, button {
+    padding: 10px;
+    font-size: 16px;
+    margin: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+#color-list {
+    display: none;
+    margin-top: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.color-btn {
+    padding: 12px;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    font-weight: bold;
+    border-radius: 5px;
+    text-align: left;
+    transition: transform 0.1s;
+    width: 100%;
+}
+.color-btn:hover {
+    transform: scale(1.02);
+}
+#attempts {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+#attempts li {
+    padding: 8px;
+    margin: 3px 0;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: bold;
+}
+#show-colors {
+    margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+<h1>Colordle</h1>
+
+<form id="guess-form">
+  <input name="color" placeholder="Farbname erraten" required>
+  <button type="submit">Raten</button>
+</form>
+
+<button id="show-colors">Alle Farben anzeigen</button>
+
+<div id="color-list"></div>
+<ul id="attempts"></ul>
+
+<script>
+async function loadColors() {
+    const res = await fetch('/colors');
+    const colors = await res.json();
+    const container = document.getElementById('color-list');
+    container.innerHTML = '';
+    colors.forEach(c => {
+        const btn = document.createElement('button');
+        btn.innerText = c.name;
+        btn.className = 'color-btn';
+        btn.style.backgroundColor = c.hex;
+        btn.addEventListener('click', () => guessColor(c.name));
+        container.appendChild(btn);
+    });
+}
+
+async function guessColor(name) {
+    const formData = new URLSearchParams();
+    formData.append('color', name);
+    const res = await fetch('/guess', {method: 'POST', body: formData});
+    const data = await res.json();
+    if(data.error){ alert(data.error); return; }
+
+    const attemptsContainer = document.getElementById('attempts');
+    attemptsContainer.innerHTML = '';
+    data.attempts.forEach(a => {
+        const li = document.createElement('li');
+        li.innerText = `${a.name} - ${a.percent}%`;
+        li.style.backgroundColor = a.percent === 100 ? '#4CAF50' : `rgba(0,0,0,0.7)`;
+        attemptsContainer.appendChild(li);
+    });
+
+    if(data.won) alert(`🎉 Richtig! Versuche: ${data.attempts.length}`);
+}
+
+document.getElementById('guess-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const color = document.querySelector('input[name="color"]').value;
+    guessColor(color);
+});
+
+document.getElementById('show-colors').addEventListener('click', () => {
+    const list = document.getElementById('color-list');
+    if(list.style.display === 'none'){
+        list.style.display = 'flex';
+        loadColors();
+    } else {
+        list.style.display = 'none';
+    }
+});
+</script>
+</body>
+</html>
